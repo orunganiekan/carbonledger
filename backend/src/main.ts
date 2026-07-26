@@ -2,19 +2,26 @@ import { NestFactory } from '@nestjs/core';
 import { ConsoleLogger, ForbiddenException, LogLevel, ValidationPipe, VersioningType } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma.service';
+import { CorrelationIdContext } from './logger/correlation-id.context';
+import { validateEnv } from './env.validation';
+import * as express from 'express';
+import { StellarNetworkService } from './common/stellar-network.service';
+import { contractCallsRegistry } from './common/metrics.registry';
 
 /**
- * Minimal JSON logger — wraps NestJS ConsoleLogger so every line emitted to
- * stdout is a single JSON object.  Promtail's JSON pipeline stage picks up
- * `level`, `message`, and `service` labels automatically.
+ * Enhanced JSON logger with correlation ID support.
+ * Wraps NestJS ConsoleLogger so every line emitted to stdout is a single JSON object.
+ * Includes correlation ID from AsyncLocalStorage for request tracing.
  */
 class JsonLogger extends ConsoleLogger {
   private write(level: string, message: unknown, context?: string): void {
+    const correlationId = CorrelationIdContext.getCorrelationId();
     process.stdout.write(
       JSON.stringify({
         timestamp: new Date().toISOString(),
         level,
         service: 'backend',
+        correlationId: correlationId || undefined,
         context: context ?? this.context,
         message,
       }) + '\n',
@@ -29,6 +36,8 @@ class JsonLogger extends ConsoleLogger {
 }
 
 async function bootstrap() {
+  validateEnv();
+
   const logLevel = (process.env.LOG_LEVEL ?? 'info').toLowerCase() as LogLevel;
 
   const app = await NestFactory.create(AppModule, {
@@ -79,12 +88,13 @@ async function bootstrap() {
      optionsSuccessStatus: 204,
    });
 
+  const stellarNetwork = app.get(StellarNetworkService);
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.get("/health", (_req: any, res: any) => {
     res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Readiness — DB and Redis must be reachable
+  // Readiness — DB, Redis and Stellar connectivity must be reachable
   httpAdapter.get('/health/ready', async (_req: any, res: any) => {
     const checks: Record<string, string> = {};
     let healthy = true;
@@ -118,6 +128,20 @@ async function bootstrap() {
       healthy = false;
     }
 
+    // Stellar Horizon / Soroban RPC check
+    try {
+      const stellarCheck = await stellarNetwork.checkConnectivity();
+      if (!stellarCheck.healthy) {
+        healthy = false;
+        checks.stellar = `horizon: ${stellarCheck.horizon.details ?? 'ok'}, rpc: ${stellarCheck.rpc.details ?? 'ok'}`;
+      } else {
+        checks.stellar = 'ok';
+      }
+    } catch (err: any) {
+      checks.stellar = `error: ${err.message}`;
+      healthy = false;
+    }
+
     res.status(healthy ? 200 : 503).json({
       status: healthy ? 'ok' : 'degraded',
       checks,
@@ -125,6 +149,23 @@ async function bootstrap() {
     });
   });
 
+  // Prometheus-compatible metrics endpoint.
+  // Scraped by Grafana Agent / Prometheus at /metrics.
+  // No authentication — metrics contain no sensitive data, only counters.
+  httpAdapter.get('/metrics', (_req: any, res: any) => {
+    res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    res.send(contractCallsRegistry.toPrometheusText());
+  });
+
   await app.listen(process.env.PORT ?? 3001);
 }
+
+process.on('unhandledRejection', (reason) => {
+  console.error(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    event: 'unhandledRejection',
+    reason: reason instanceof Error ? reason.stack || reason.message : reason,
+  }));
+});
+
 bootstrap();
