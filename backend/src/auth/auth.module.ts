@@ -9,6 +9,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { JWTRotationStrategy } from './jwt-rotation.strategy';
 import { LoginRateLimitGuard } from './login-rate-limit.guard';
 import { RolesGuard } from './roles.guard';
+import { TokenFamilyService } from './token-family.service';
 import { PrismaService } from '../prisma.service';
 
 @Module({
@@ -16,12 +17,16 @@ import { PrismaService } from '../prisma.service';
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
-      signOptions: { expiresIn: process.env.JWT_EXPIRY || '15m' },
+      signOptions: {
+        expiresIn: process.env.JWT_EXPIRY || '15m',
+        issuer: process.env.JWT_ISSUER || 'carbonledger',
+      },
     }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
   ],
   providers: [
     AuthService,
+    TokenFamilyService,
     JwtStrategy,
     JWTRotationStrategy,
     LoginRateLimitGuard,
@@ -30,6 +35,6 @@ import { PrismaService } from '../prisma.service';
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
   controllers: [AuthController],
-  exports: [AuthService, JwtModule, RolesGuard],
+  exports: [AuthService, TokenFamilyService, JwtModule, RolesGuard],
 })
 export class AuthModule {}

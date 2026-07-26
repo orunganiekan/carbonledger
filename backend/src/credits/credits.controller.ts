@@ -10,6 +10,12 @@ export class CreditsController {
 
   // ── Public read endpoints ────────────────────────────────────────────────
 
+  @Get('project/:projectId/batches')
+  @Public()
+  getBatchesByProject(@Param('projectId') projectId: string) {
+    return this.creditsService.getBatchesByProject(projectId);
+  }
+
   @Get('batch/:id')
   @Public()
   getBatch(@Param('id') id: string) {
@@ -26,6 +32,24 @@ export class CreditsController {
   @Public()
   lookup(@Param('serial') serial: string) {
     return this.creditsService.lookupSerial(serial);
+  }
+
+  /**
+   * GET /credits/provenance/:serial
+   *
+   * Returns full provenance for a single credit serial number:
+   *   - minting batch details (project name, vintage year)
+   *   - all transfer events in chronological order
+   *   - current owner
+   *   - retirement details if retired
+   *
+   * Public — no authentication required.
+   * Returns 404 when the serial number is unknown.
+   */
+  @Get('provenance/:serial')
+  @Public()
+  getProvenance(@Param('serial') serial: string) {
+    return this.creditsService.getSerialProvenance(serial);
   }
 
   // ── Admin: mint credits for verified projects ────────────────────────────
