@@ -1,17 +1,25 @@
 import {
   Controller, Get, Post, Delete, Body, Param, Query,
-  UseGuards, Request,
+  UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard, Roles } from '../auth/roles.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/decorators';
 import { AdminService } from './admin.service';
-import { VerifierWhitelistDto, UpdateTreasuryDto } from './admin.dto';
+import { VerifierWhitelistDto, UpdateTreasuryDto, AssignRoleDto, UpdateCanaryDto } from './admin.dto';
 
 @Controller('admin')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @Roles('admin')
 export class AdminController {
   constructor(private readonly admin: AdminService) {}
+
+  // ── Role assignment ─────────────────────────────────────────────────────────
+
+  @Post('users/:publicKey/role')
+  assignRole(@Param('publicKey') publicKey: string, @Body() dto: AssignRoleDto) {
+    return this.admin.assignRole(publicKey, dto.role);
+  }
 
   // ── Verifier whitelist ──────────────────────────────────────────────────────
 
@@ -65,5 +73,10 @@ export class AdminController {
     @Query('action') action?: string,
   ) {
     return this.admin.getAuditLogs({ limit, offset, action });
+  }
+
+  @Get('abuse-log')
+  getAbuseLog() {
+    return this.admin.getAbuseLog();
   }
 }
