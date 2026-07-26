@@ -2,11 +2,12 @@ import {
   isConnected,
   isAllowed,
   setAllowed,
-  getPublicKey as freighterGetPublicKey,
+  getAddress,
   signTransaction as freighterSignTransaction,
   getNetworkDetails,
   WatchWalletChanges,
 } from "@stellar/freighter-api";
+import { Networks } from "@stellar/stellar-sdk";
 
 export type FreighterNetwork = "TESTNET" | "PUBLIC" | "FUTURENET";
 
@@ -24,16 +25,18 @@ export async function connectFreighter(): Promise<string> {
 }
 
 export async function getPublicKey(): Promise<string> {
-  const result = await freighterGetPublicKey();
+  const result = await getAddress();
   if (result.error) throw new Error(result.error);
-  return result.publicKey;
+  return result.address;
 }
 
 export async function signTransaction(
   xdr: string,
   network: FreighterNetwork = "TESTNET",
 ): Promise<string> {
-  const result = await freighterSignTransaction(xdr, { network });
+  const passphrase =
+    network === "PUBLIC" ? Networks.PUBLIC : Networks.TESTNET;
+  const result = await freighterSignTransaction(xdr, { networkPassphrase: passphrase });
   if (result.error) throw new Error(result.error);
   return result.signedTxXdr;
 }
