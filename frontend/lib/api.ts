@@ -493,24 +493,7 @@ export async function exportEsgPdf(filters: EsgExportFilters): Promise<Blob> {
   return res.blob();
 }
 
-export function useCreditBatches(projectId: string) {
-  return useSWR<CreditBatch[]>(
-    projectId ? `${API_URL}/projects/${projectId}/batches` : null,
-    fetcher,
-    swrConfig,
-  );
-}
-
-export interface LeaderboardEntry {
-  rank: number;
-  beneficiary: string;
-  totalTonnes: number;
-}
-
-export function useLeaderboard(year?: number) {
-  const key = year ? `${API_URL}/leaderboard?year=${year}` : `${API_URL}/leaderboard`;
-  return useSWR<LeaderboardEntry[]>(key, fetcher, { ...swrConfig, refreshInterval: 30_000 });
-}
+// ── Notification preferences ───────────────────────────────────────────────────
 
 export interface NotificationPreferences {
   projectApproved: boolean;
@@ -521,7 +504,7 @@ export interface NotificationPreferences {
 
 export function useNotificationPreferences(publicKey: string) {
   return useSWR<NotificationPreferences>(
-    publicKey ? `${API_URL}/users/${publicKey}/notification-preferences` : null,
+    publicKey ? `${API_URL}/notifications/preferences/${encodeURIComponent(publicKey)}` : null,
     fetcher,
     swrConfig,
   );
@@ -531,11 +514,29 @@ export async function updateNotificationPreferences(
   publicKey: string,
   patch: Partial<NotificationPreferences>,
 ): Promise<NotificationPreferences> {
-  const res = await fetch(`${API_URL}/users/${publicKey}/notification-preferences`, {
+  const res = await fetch(`${API_URL}/notifications/preferences/${encodeURIComponent(publicKey)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
   });
-  if (!res.ok) throw new Error("Failed to update notification preferences");
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Update failed");
   return res.json();
+}
+
+export function useLeaderboard(year?: number) {
+  const query = year ? `?year=${year}` : "";
+  return useSWR<LeaderboardEntry[]>(`${API_URL}/stats/leaderboard${query}`, fetcher, swrConfig);
+}
+
+export function useCreditBatches(projectId: string) {
+  return useSWR<CreditBatch[]>(
+    projectId ? `${API_URL}/credits/project/${encodeURIComponent(projectId)}/batches` : null,
+    async (url: string) => {
+      const res = await fetch(url);
+      if (res.status === 404) return [];
+      if (!res.ok) throw new Error("Failed to load credit batches");
+      return res.json();
+    },
+    swrConfig,
+  );
 }
