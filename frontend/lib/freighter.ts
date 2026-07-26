@@ -11,6 +11,15 @@ import { Networks } from "@stellar/stellar-sdk";
 
 export type FreighterNetwork = "TESTNET" | "PUBLIC" | "FUTURENET";
 
+const TESTNET_PASSPHRASE =
+  "Test SDF Network ; September 2015";
+const PUBLIC_PASSPHRASE =
+  "Public Global Stellar Network ; September 2015";
+
+function passphraseFor(network: FreighterNetwork): string {
+  return network === "PUBLIC" ? PUBLIC_PASSPHRASE : TESTNET_PASSPHRASE;
+}
+
 export async function connectFreighter(): Promise<string> {
   const connected = await isConnected();
   if (!connected.isConnected) {
@@ -34,9 +43,15 @@ export async function signTransaction(
   xdr: string,
   network: FreighterNetwork = "TESTNET",
 ): Promise<string> {
+<<<<<<< HEAD
   const passphrase =
     network === "PUBLIC" ? Networks.PUBLIC : Networks.TESTNET;
   const result = await freighterSignTransaction(xdr, { networkPassphrase: passphrase });
+=======
+  const result = await freighterSignTransaction(xdr, {
+    networkPassphrase: passphraseFor(network),
+  });
+>>>>>>> origin/cursor/679-transaction-poller-9a06
   if (result.error) throw new Error(result.error);
   return result.signedTxXdr;
 }

@@ -17,11 +17,16 @@ export async function getOrderBook(
   sellingAsset: Asset,
   buyingAsset: Asset,
   limit = 20,
+<<<<<<< HEAD
 ): Promise<{ asks: { price: string }[]; bids: { price: string }[] }> {
   return server.orderbook(sellingAsset, buyingAsset).limit(limit).call() as Promise<{
     asks: { price: string }[];
     bids: { price: string }[];
   }>;
+=======
+): Promise<{ bids: { price: string; amount: string }[]; asks: { price: string; amount: string }[] }> {
+  return server.orderbook(sellingAsset, buyingAsset).limit(limit).call();
+>>>>>>> origin/cursor/679-transaction-poller-9a06
 }
 
 export async function getBestPrice(
@@ -91,7 +96,11 @@ export async function getTradeHistory(
   baseAsset: Asset,
   counterAsset: Asset,
   limit = 50,
+<<<<<<< HEAD
 ): Promise<unknown[]> {
+=======
+) {
+>>>>>>> origin/cursor/679-transaction-poller-9a06
   const trades = await server
     .trades()
     .forAssetPair(baseAsset, counterAsset)
