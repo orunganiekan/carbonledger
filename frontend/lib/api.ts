@@ -492,3 +492,50 @@ export async function exportEsgPdf(filters: EsgExportFilters): Promise<Blob> {
   if (!res.ok) throw new Error("PDF export failed");
   return res.blob();
 }
+
+export function useCreditBatches(projectId: string) {
+  return useSWR<CreditBatch[]>(
+    projectId ? `${API_URL}/projects/${projectId}/batches` : null,
+    fetcher,
+    swrConfig,
+  );
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  beneficiary: string;
+  totalTonnes: number;
+}
+
+export function useLeaderboard(year?: number) {
+  const key = year ? `${API_URL}/leaderboard?year=${year}` : `${API_URL}/leaderboard`;
+  return useSWR<LeaderboardEntry[]>(key, fetcher, { ...swrConfig, refreshInterval: 30_000 });
+}
+
+export interface NotificationPreferences {
+  projectApproved: boolean;
+  creditsMinted: boolean;
+  purchaseConfirmed: boolean;
+  retirementConfirmed: boolean;
+}
+
+export function useNotificationPreferences(publicKey: string) {
+  return useSWR<NotificationPreferences>(
+    publicKey ? `${API_URL}/users/${publicKey}/notification-preferences` : null,
+    fetcher,
+    swrConfig,
+  );
+}
+
+export async function updateNotificationPreferences(
+  publicKey: string,
+  patch: Partial<NotificationPreferences>,
+): Promise<NotificationPreferences> {
+  const res = await fetch(`${API_URL}/users/${publicKey}/notification-preferences`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update notification preferences");
+  return res.json();
+}

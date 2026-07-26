@@ -11,6 +11,8 @@ import TransactionStatus, { TxStatus } from "../../components/TransactionStatus"
 import Toast, { useToast } from "../../components/Toast";
 import { useWalletStatus } from "../../hooks/useWalletStatus";
 import WalletPrompt from "../../components/WalletPrompt";
+import ErrorBoundary from "../../components/ErrorBoundary";
+import { useBuyButton } from "../../lib/useBuyButton";
 
 export default function BuyPage() {
   const searchParams = useSearchParams();

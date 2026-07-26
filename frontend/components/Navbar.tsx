@@ -46,9 +46,11 @@ export default function Navbar() {
   }, [drawerOpen]);
 
   const handleConnect = async () => {
-    const result = await connect();
-    if (!result.success && result.error?.includes('not installed')) {
-      if (confirm('Freighter wallet not installed. Install now?')) {
+    try {
+      await connect();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('not installed') && confirm('Freighter wallet not installed. Install now?')) {
         window.open('https://freighter.app/', '_blank');
       }
     }

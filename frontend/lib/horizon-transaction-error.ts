@@ -38,7 +38,7 @@ function extractContractCodeFromOpResult(opResult: xdr.OperationResult): number 
       return null;
     }
 
-    const err = invokeResult.error?.();
+    const err = (invokeResult as unknown as { error?: () => { switch: () => { name: string }; contractCode: () => number; contractError: () => number } }).error?.();
     if (!err) {
       return null;
     }

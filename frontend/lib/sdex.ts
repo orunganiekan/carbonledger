@@ -17,16 +17,21 @@ export async function getOrderBook(
   sellingAsset: Asset,
   buyingAsset: Asset,
   limit = 20,
-): Promise<Horizon.HorizonApi.OrderbookRecord> {
-  return server.orderbook(sellingAsset, buyingAsset).limit(limit).call();
+): Promise<{ asks: { price: string }[]; bids: { price: string }[] }> {
+  return server.orderbook(sellingAsset, buyingAsset).limit(limit).call() as Promise<{
+    asks: { price: string }[];
+    bids: { price: string }[];
+  }>;
 }
 
 export async function getBestPrice(
   sellingAsset: Asset,
   buyingAsset: Asset,
 ): Promise<number | null> {
-  const book = await getOrderBook(sellingAsset, buyingAsset);
-  if (book.asks.length === 0) return null;
+  const book = (await getOrderBook(sellingAsset, buyingAsset)) as {
+    asks: { price: string }[];
+  };
+  if (!book.asks?.length) return null;
   return parseFloat(book.asks[0].price);
 }
 
@@ -86,7 +91,7 @@ export async function getTradeHistory(
   baseAsset: Asset,
   counterAsset: Asset,
   limit = 50,
-): Promise<Horizon.HorizonApi.TradeRecord[]> {
+): Promise<unknown[]> {
   const trades = await server
     .trades()
     .forAssetPair(baseAsset, counterAsset)
