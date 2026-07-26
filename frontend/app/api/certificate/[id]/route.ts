@@ -16,9 +16,15 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL;
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+<<<<<<< HEAD
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = params;
+  const { id } = await params;
+=======
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+>>>>>>> origin/cursor/679-transaction-poller-9a06
 
   if (!id) {
     return NextResponse.json({ error: "Missing retirement ID" }, { status: 400 });
